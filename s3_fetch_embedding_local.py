@@ -14,30 +14,6 @@ import tempfile
 import shutil
 from dotenv import load_dotenv
 
-def download_images_from_s3(bucket_name, prefix, local_dir):
-    """
-    Download images from an S3 bucket to a local directory
-    """
-    print(f"Connecting to S3 bucket: {bucket_name}")
-    s3_client = boto3.client('s3')
-    os.makedirs(local_dir, exist_ok=True)
-    print(f"Listing objects in {bucket_name}/{prefix}")
-    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
-    if 'Contents' not in response:
-        print(f"No objects found in {bucket_name}/{prefix}")
-        return []
-    image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')
-    image_objects = [obj for obj in response['Contents']
-                     if obj['Key'].lower().endswith(image_extensions)]
-    print(f"Found {len(image_objects)} images in S3 bucket")
-    downloaded_files = []
-    for obj in tqdm(image_objects, desc="Downloading images"):
-        filename = os.path.basename(obj['Key'])
-        local_path = os.path.join(local_dir, filename)
-        s3_client.download_file(bucket_name, obj['Key'], local_path)
-        downloaded_files.append(filename)
-    print(f"Downloaded {len(downloaded_files)} images to {local_dir}")
-    return downloaded_files
 
 # Global placeholders in worker processes
 device = torch.device('cpu')
@@ -148,38 +124,14 @@ def process_images(input_dir, output_dir, batch_size=8):
     # Save combined embeddings if needed
     print(f"Processed {len(image_files)} images, found {total_faces} faces")
 
-
 def main():
-    load_dotenv()
-    parser = argparse.ArgumentParser("Download images from S3 and generate face embeddings (parallel)")
-    parser.add_argument('--bucket', required=False)
-    parser.add_argument('--prefix', required=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument('--output-dir', default='embeds/s3_faces')
     parser.add_argument('--batch-size', type=int, default=8)
-    parser.add_argument('--keep-images', action='store_true')
-    parser.add_argument('--images-dir', type=str)
     args = parser.parse_args()
 
-    bucket = args.bucket or os.getenv('S3_BUCKET')
-    prefix = args.prefix or os.getenv('S3_PREFIX')
-    if not bucket or not prefix:
-        print("Error: S3 bucket and prefix must be provided")
-        return
-
-    if args.keep_images and args.images_dir:
-        images_dir = args.images_dir
-        os.makedirs(images_dir, exist_ok=True)
-        temp_dir = None
-    else:
-        temp_dir = tempfile.mkdtemp()
-        images_dir = temp_dir
-
-    try:
-        download_images_from_s3(bucket, prefix, images_dir)
-        process_images(images_dir, args.output_dir, args.batch_size)
-    finally:
-        if temp_dir and not args.keep_images:
-            shutil.rmtree(temp_dir)
+    base = 'test_images'
+    process_images(base, args.output_dir, args.batch_size)
 
 if __name__ == '__main__':
     main()
