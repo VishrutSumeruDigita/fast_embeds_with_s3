@@ -1,0 +1,18 @@
+Similarity Statistics
+====================
+
+Different Images:
+  Count: 416
+  Mean: -0.0253
+  Median: -0.0221
+  Std Dev: 0.1389
+  Min: -0.3498
+  Max: 0.3491
+
+Same Image:
+  Count: 445
+  Mean: 0.3738
+  Median: 0.3877
+  Std Dev: 0.1554
+  Min: -0.2209
+  Max: 0.7124
