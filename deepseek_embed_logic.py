@@ -20,19 +20,24 @@ mtcnn: MTCNN = None
 resnet: InceptionResnetV1 = None
 
 def init_worker():
-    """Initialize MTCNN and ResNet once per worker with optimized settings."""
+    """Initialize with balanced settings"""
     global mtcnn, resnet
     torch.set_grad_enabled(False)
-    torch.set_num_threads(2)  # Allow 2 threads per worker
+    torch.set_num_threads(1)  # Reduced to prevent CPU overload
+    
     mtcnn = MTCNN(
         keep_all=True,
-        min_face_size=40,  # Increased from 20 to reduce scales
-        thresholds=[0.5, 0.6, 0.6],  # Lower thresholds for faster processing
-        factor=0.85,  # Increased factor to reduce pyramid scales
-        post_process=True,
+        min_face_size=40,
+        thresholds=[0.6, 0.7, 0.7],  # More balanced thresholds
+        factor=0.709,  # Original factor value
         device=device,
+        post_process=False  # Faster processing
     )
-    resnet = InceptionResnetV1(pretrained='vggface2').eval()
+    resnet = InceptionResnetV1(
+        pretrained='vggface2',
+        classify=False,
+        device=device
+    ).eval()
 
 def process_batch(batch_files, input_dir, faces_dir):
     global mtcnn, resnet
@@ -44,22 +49,19 @@ def process_batch(batch_files, input_dir, faces_dir):
         try:
             img_path = os.path.join(input_dir, image_file)
             img = Image.open(img_path).convert('RGB')
-            # Optional: Resize image to reduce processing time
-            # img.thumbnail((640, 640), Image.BILINEAR)
             
-            # Detect faces with landmarks
-            boxes, probs, landmarks = mtcnn.detect(img, landmarks=True)
+            # Detect faces with boxes only
+            boxes, probs = mtcnn.detect(img)
             if boxes is None:
                 continue
-            
-            # Extract faces using precomputed landmarks
-            crops = mtcnn.extract(img, boxes, landmarks=landmarks, save_path=None)
+                
+            # Extract faces without landmarks parameter
+            crops = mtcnn.extract(img, boxes, save_path=None)
             for i, (box, crop) in enumerate(zip(boxes, crops)):
                 crop_meta.append((image_file, i, box, float(probs[i]) if probs is not None else None))
                 all_crops.append(crop.unsqueeze(0))
         except Exception as e:
             print(f"Error processing {image_file}: {e}")
-
     if not all_crops:
         return batch_results
 
