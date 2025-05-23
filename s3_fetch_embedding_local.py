@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 
 # Global placeholders in worker processes
-device = torch.device('cpu')
+device = torch.device('cuda')
 mtcnn: MTCNN = None
 resnet: InceptionResnetV1 = None
 
