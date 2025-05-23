@@ -12,8 +12,8 @@ from elasticsearch import Elasticsearch
 
 # Load environment variables
 load_dotenv()
-ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
-INDEX_NAME = os.getenv("ES_INDEX", "face_embeddings")
+ES_HOST ="http://localhost:9200"
+INDEX_NAME ="face_embeddings"
 
 # Globals for workers
 device = torch.device("cuda")
