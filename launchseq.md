@@ -11,4 +11,15 @@ docker run --gpus all \
   face-embedder:latest
 
 
+
+
+# 1. Pull Pinecone’s local emulator image
+docker pull pinecone/pinecone:latest
+
+# 2. Run it, exposing the default REST port 8100
+docker run -d --name pinecone-local \
+  -p 8100:8100 \
+  pinecone/pinecone:latest
+
+
 """
