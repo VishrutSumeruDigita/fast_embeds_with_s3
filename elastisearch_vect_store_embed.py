@@ -12,10 +12,19 @@ from elasticsearch import Elasticsearch
 
 # Load environment variables
 load_dotenv()
-ES_HOST ="http://localhost:9200"
-INDEX_NAME ="face_embeddings"
 
-# Globals for workers
+# Set ES host and index name with fallback/default values
+ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
+INDEX_NAME = os.getenv("INDEX_NAME", "face_embeddings")
+
+# Global Elasticsearch client instance
+es_client = Elasticsearch(
+    ES_HOST,
+    verify_certs=False,
+    basic_auth=None  # Required for ES 8+ without login
+)
+
+# Globals for multiprocessing workers
 device = torch.device("cuda")
 mtcnn: MTCNN = None
 resnet: InceptionResnetV1 = None
@@ -23,15 +32,28 @@ es: Elasticsearch = None
 
 
 def create_index(es_client: Elasticsearch):
-    """Create Elasticsearch index with dense_vector mapping."""
+    print(f"🔍 DEBUG — Index name is: {repr(INDEX_NAME)}")
+
+    if not INDEX_NAME or not isinstance(INDEX_NAME, str):
+        raise ValueError("❌ INDEX_NAME is invalid or missing")
+
+    # Check if index exists
     if es_client.indices.exists(index=INDEX_NAME):
+        print(f"✅ Index '{INDEX_NAME}' already exists.")
         return
+
+    print(f"🚀 Creating index '{INDEX_NAME}' with vector search enabled...")
+
     es_client.indices.create(
         index=INDEX_NAME,
         body={
+            "settings": {
+                "number_of_shards": 1,
+                "number_of_replicas": 0
+            },
             "mappings": {
                 "properties": {
-                    "image_name": {"type": "keyword"},
+                    "image_name": { "type": "keyword" },
                     "embeds": {
                         "type": "dense_vector",
                         "dims": 512,
@@ -42,6 +64,7 @@ def create_index(es_client: Elasticsearch):
             }
         }
     )
+    print(f"✅ Index '{INDEX_NAME}' created successfully.")
 
 
 def init_worker(min_face_size, thresholds, factor):
@@ -59,13 +82,18 @@ def init_worker(min_face_size, thresholds, factor):
         device=device,
     )
     resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
-    es = Elasticsearch(ES_HOST)
+
+    # Proper ES client for worker processes
+    es = Elasticsearch(
+        ES_HOST,
+        verify_certs=False,
+        basic_auth=None
+    )
 
 
 def process_batch(batch_files, input_dir):
     """Detect faces, embed, and index into Elasticsearch."""
     global mtcnn, resnet, es
-    uploads = []
 
     for image_file in batch_files:
         path = os.path.join(input_dir, image_file)
@@ -82,21 +110,18 @@ def process_batch(batch_files, input_dir):
             for i, (box, conf, emb) in enumerate(zip(boxes, probs, embeddings)):
                 image_name = Path(image_file).stem
                 face_id = f"{image_name}_face_{i+1}"
-                # Prepare document for ES
                 doc = {
                     "image_name": image_file,
                     "embeds": emb.tolist()
                 }
-                # Index into ES
                 es.index(index=INDEX_NAME, id=face_id, document=doc)
         except Exception as e:
-            print(f"Error processing {image_file}: {e}")
+            print(f"⚠️ Error processing {image_file}: {e}")
 
 
 def process_images(input_dir, batch_size=8):
-    files = [f for f in os.listdir(input_dir)
-             if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-    batches = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
+    files = [f for f in os.listdir(input_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    batches = [files[i:i + batch_size] for i in range(0, len(files), batch_size)]
 
     num_workers = max(1, multiprocessing.cpu_count() - 1)
     with multiprocessing.Pool(
@@ -108,18 +133,14 @@ def process_images(input_dir, batch_size=8):
         for _ in tqdm(pool.imap_unordered(worker, batches), total=len(batches)):
             pass
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", default="test_images")
     parser.add_argument("--batch-size", type=int, default=8)
     args = parser.parse_args()
 
-    # Create ES index if missing
-    es_client = Elasticsearch(ES_HOST)
+    # Use the global, properly configured es_client
     create_index(es_client)
-
-    # Process images and index embeddings
     process_images(args.input_dir, args.batch_size)
 
 
