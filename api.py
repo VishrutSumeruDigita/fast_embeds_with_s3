@@ -13,19 +13,19 @@ import torch
 load_dotenv()
 
 # Configs
-ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
+ES_HOST = os.getenv("ES_HOST", "http://13.235.54.151:9200")
 INDEX_NAME = os.getenv("INDEX_NAME", "face_embeddings")
 
 # Device setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"\ud83d\udd25 Using device: {device}")
+print(f" Using device: {device}")
 
 # Initialize app & Elasticsearch
 app = FastAPI()
 es = Elasticsearch(ES_HOST, verify_certs=False)
 
 # Initialize FaceAnalysis model
-face_app = FaceAnalysis(name='antelopev2', providers=['CUDAExecutionProvider' if torch.cuda.is_available() else 'CPUExecutionProvider'])
+face_app = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider' if torch.cuda.is_available() else 'CPUExecutionProvider'])
 face_app.prepare(ctx_id=0 if torch.cuda.is_available() else -1)
 
 # Create index if it doesn't exist
