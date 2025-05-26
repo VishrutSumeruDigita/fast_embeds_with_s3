@@ -1,0 +1,91 @@
+# 🧠 Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+
+
+
+visualizations/**/*.png
+*.png
+
+
+
+# 🧪 Jupyter Notebooks
+*.ipynb_checkpoints
+*.nbconvert.ipynb
+
+# 💣 OS crap
+.DS_Store
+Thumbs.db
+
+# 🔥 Virtual Envs
+venv/
+.env
+.env.*
+
+# 🚫 Package/Dependency Junk
+*.lock
+Pipfile
+Pipfile.lock
+
+# 📸 Images & Binary Dumps
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.tiff
+*.bmp
+
+# 🚀 CUDA or Deb Files (they’re heavy, don’t version them!)
+*.deb
+
+# 📂 Results, Dumps, and Logs
+results/
+*.log
+*.out
+*.tmp
+*.bak
+*.old
+
+# 🤖 VSCode & IDEs
+.vscode/
+.idea/
+*.swp
+
+# 📤 Upload folders
+test_images/
+image_comparisons/
+visualizations/
+
+# ❓ Optional: Remove big generated files
+Validate.ipynb
+cuda-repo-wsl-ubuntu-11-4-local_11.4.0-1_amd64.deb
+
+# ✅ Ignore these but keep them locally
+Validate.ipynb
+cuda-repo-wsl-ubuntu-11-4-local_11.4.0-1_amd64.deb
+gurudev.jpg
+similarity_distribution.png
+
+# 🗂 Ignore these directories
+__pycache__/
+image_comparisons/
+results/
+test_images/
+venv/
+visualizations/
+
+
+
+# Never commit this stuff again
+venv/
+*.deb
+*.so
+*.dat
+*.pack
+*.ipynb
